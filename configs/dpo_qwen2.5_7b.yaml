@@ -1,0 +1,20 @@
+inherit: base.yaml
+
+model:
+  model_name: "unsloth/Qwen2.5-7B-Instruct-bnb-4bit"
+  max_seq_length: 4096
+
+training:
+  num_train_epochs: 1
+  learning_rate: 5.0e-5
+
+dpo:
+  beta: 0.1
+  loss_type: "sigmoid"
+
+data:
+  train_file: "data/processed/dpo_train.jsonl"
+  format: "dpo"
+
+output:
+  experiment_name: "dpo_qwen2.5_7b_medical"
