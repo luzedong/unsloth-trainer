@@ -38,14 +38,16 @@ pip install -r requirements.txt
 ### SFT Training
 
 ```bash
-python scripts/train_sft.py --config configs/sft_qwen3.5_4b.yaml
+HF_HUB_OFFLINE=1 python scripts/train_sft.py --config configs/sft_qwen3.5_4b.yaml
 ```
 
 ### DPO Training
 
 ```bash
-python scripts/train_dpo.py --config configs/dpo_qwen3.5_4b.yaml
+HF_HUB_OFFLINE=1 python scripts/train_dpo.py --config configs/dpo_qwen3.5_4b.yaml
 ```
+
+> **Note:** `HF_HUB_OFFLINE=1` skips the HuggingFace connectivity check that Unsloth performs on startup. This is required when using local models in environments without internet access, otherwise it will timeout.
 
 ### CLI Overrides
 
