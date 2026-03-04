@@ -34,7 +34,7 @@ unsloth-trainer/
 ### Install Dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install unsloth
 ```
 
 ### SFT Training
