@@ -1,7 +1,6 @@
-"""YAML config loading with inheritance and CLI override support."""
+"""YAML config loading with CLI override support."""
 
 import copy
-import sys
 from pathlib import Path
 
 import yaml
@@ -65,31 +64,10 @@ def _set_nested(d: dict, key_path: str, value):
     d[keys[-1]] = value
 
 
-def _resolve_inherit(config: dict, config_dir: Path) -> dict:
-    """Resolve the 'inherit' field by loading and merging parent config."""
-    if "inherit" not in config:
-        return config
-
-    parent_path = config_dir / config["inherit"]
-    if not parent_path.exists():
-        raise FileNotFoundError(f"Inherited config not found: {parent_path}")
-
-    with open(parent_path) as f:
-        parent_config = yaml.safe_load(f) or {}
-
-    # Recursively resolve parent's inheritance
-    parent_config = _resolve_inherit(parent_config, parent_path.parent)
-
-    # Remove inherit key before merging
-    child_config = {k: v for k, v in config.items() if k != "inherit"}
-
-    return _deep_merge(parent_config, child_config)
-
-
 def load_config(config_path: str, cli_args: list[str] | None = None) -> dict:
-    """Load config from YAML file with inheritance and CLI overrides.
+    """Load config from YAML file with optional CLI overrides.
 
-    Priority: CLI args > experiment YAML > inherited base YAML
+    Priority: CLI args > YAML config
     """
     config_path = Path(config_path)
     if not config_path.exists():
@@ -97,9 +75,6 @@ def load_config(config_path: str, cli_args: list[str] | None = None) -> dict:
 
     with open(config_path) as f:
         config = yaml.safe_load(f) or {}
-
-    # Resolve inheritance
-    config = _resolve_inherit(config, config_path.parent)
 
     # Apply CLI overrides
     if cli_args:

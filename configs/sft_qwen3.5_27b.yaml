@@ -1,22 +1,50 @@
-inherit: base.yaml
-
 model:
   model_name: "Qwen/Qwen3.5-27B"
   max_seq_length: 4096
   load_in_4bit: false
   load_in_16bit: true
   full_finetuning: false
+  dtype: null
+
+lora:
+  r: 16
+  lora_alpha: 16
+  lora_dropout: 0
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  bias: "none"
+  use_rslora: false
+  use_gradient_checkpointing: "unsloth"
+  random_state: 3407
 
 training:
-  num_train_epochs: 3
   per_device_train_batch_size: 2
   gradient_accumulation_steps: 8
+  warmup_steps: 10
+  num_train_epochs: 3
   learning_rate: 2.0e-4
+  weight_decay: 0.01
+  lr_scheduler_type: "cosine"
+  logging_steps: 10
+  save_strategy: "steps"
+  save_steps: 100
+  save_total_limit: 3
+  seed: 42
+  bf16: true
+  optim: "adamw_8bit"
 
 data:
   train_file: "data/processed/sft_train.jsonl"
   val_file: "data/processed/sft_val.jsonl"
+  val_size: 0.05
   format: "alpaca"
 
 output:
+  dir: "outputs"
   experiment_name: "sft_qwen3.5_27b_medical"
