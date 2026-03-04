@@ -7,8 +7,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from trl import SFTTrainer
-from transformers import TrainingArguments
+from trl import SFTTrainer, SFTConfig
 
 from src import load_config, load_model, load_sft_dataset, ExperimentCallback
 
@@ -38,7 +37,7 @@ def main():
 
     # Training arguments
     train_cfg = config["training"]
-    training_args = TrainingArguments(
+    training_args = SFTConfig(
         output_dir=output_dir,
         per_device_train_batch_size=train_cfg["per_device_train_batch_size"],
         gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
@@ -54,6 +53,8 @@ def main():
         seed=train_cfg["seed"],
         bf16=train_cfg["bf16"],
         optim=train_cfg["optim"],
+        max_seq_length=config["model"]["max_seq_length"],
+        dataset_text_field="text",
         report_to="none",
     )
 
@@ -64,8 +65,6 @@ def main():
         train_dataset=datasets["train"],
         eval_dataset=datasets.get("val"),
         args=training_args,
-        max_seq_length=config["model"]["max_seq_length"],
-        dataset_text_field="text",
         callbacks=[ExperimentCallback(config, config_path)],
     )
 
