@@ -1,5 +1,7 @@
 # Unsloth Trainer
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/luzedong/unsloth-trainer)
+
 A lightweight LLM fine-tuning scaffold built on [Unsloth](https://github.com/unslothai/unsloth) + [trl](https://github.com/huggingface/trl), supporting SFT (Supervised Fine-Tuning) and DPO (Direct Preference Optimization) training.
 
 ## Project Structure
