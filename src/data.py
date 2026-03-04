@@ -6,19 +6,26 @@ from pathlib import Path
 from datasets import Dataset
 
 
-def _load_jsonl(file_path: str) -> list[dict]:
-    """Load a JSONL file into a list of dicts."""
+def _load_data(file_path: str) -> list[dict]:
+    """Load a JSON or JSONL file into a list of dicts."""
     path = Path(file_path)
     if not path.exists():
         raise FileNotFoundError(f"Data file not found: {path}")
 
-    data = []
     with open(path, encoding="utf-8") as f:
+        if path.suffix == ".json":
+            data = json.load(f)
+            if not isinstance(data, list):
+                raise ValueError(f"JSON file must contain a list of objects: {path}")
+            return data
+
+        # Default: JSONL (one JSON object per line)
+        data = []
         for line in f:
             line = line.strip()
             if line:
                 data.append(json.loads(line))
-    return data
+        return data
 
 
 def _format_alpaca_to_messages(example: dict) -> list[dict]:
@@ -61,7 +68,7 @@ def load_sft_dataset(config: dict, tokenizer) -> dict:
     """
     data_cfg = config["data"]
 
-    train_data = _load_jsonl(data_cfg["train_file"])
+    train_data = _load_data(data_cfg["train_file"])
     train_dataset = Dataset.from_list(train_data)
     train_dataset = train_dataset.map(
         lambda x: _format_sft_example(x, tokenizer),
@@ -71,7 +78,7 @@ def load_sft_dataset(config: dict, tokenizer) -> dict:
     result = {"train": train_dataset}
 
     if data_cfg.get("val_file"):
-        val_data = _load_jsonl(data_cfg["val_file"])
+        val_data = _load_data(data_cfg["val_file"])
         val_dataset = Dataset.from_list(val_data)
         val_dataset = val_dataset.map(
             lambda x: _format_sft_example(x, tokenizer),
@@ -124,7 +131,7 @@ def load_dpo_dataset(config: dict, tokenizer) -> dict:
     """
     data_cfg = config["data"]
 
-    train_data = _load_jsonl(data_cfg["train_file"])
+    train_data = _load_data(data_cfg["train_file"])
     train_dataset = Dataset.from_list(train_data)
     train_dataset = train_dataset.map(
         lambda x: _format_dpo_example(x, tokenizer),
@@ -134,7 +141,7 @@ def load_dpo_dataset(config: dict, tokenizer) -> dict:
     result = {"train": train_dataset}
 
     if data_cfg.get("val_file"):
-        val_data = _load_jsonl(data_cfg["val_file"])
+        val_data = _load_data(data_cfg["val_file"])
         val_dataset = Dataset.from_list(val_data)
         val_dataset = val_dataset.map(
             lambda x: _format_dpo_example(x, tokenizer),
