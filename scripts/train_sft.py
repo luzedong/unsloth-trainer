@@ -7,6 +7,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+import unsloth  # noqa: F401 -- must be imported before trl/transformers/peft
+
 from trl import SFTTrainer, SFTConfig
 
 from src import load_config, load_model, load_sft_dataset, ExperimentCallback
