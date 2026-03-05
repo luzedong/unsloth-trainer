@@ -60,6 +60,7 @@ def main():
         eval_steps=train_cfg.get("eval_steps"),
         max_seq_length=config["model"]["max_seq_length"],
         dataset_text_field="text",
+        dataset_num_proc=train_cfg.get("dataset_num_proc", 16),
         report_to="none",
     )
 
