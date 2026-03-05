@@ -31,26 +31,20 @@ def _load_data(file_path: str) -> list[dict]:
 def _format_alpaca_to_messages(example: dict) -> list[dict]:
     """Convert Alpaca format to chat messages list.
 
-    Alpaca: {"instruction": "...", "input": "...", "output": "..."}
-    Messages: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+    Concatenates system, instruction, and input into a single user message.
     """
-    instruction = example.get("instruction", "")
-    input_text = example.get("input", "")
+    parts = [p for p in (
+        example.get("system", ""),
+        example.get("instruction", ""),
+        example.get("input", ""),
+    ) if p]
+    user_content = "\n".join(parts)
     output = example.get("output", "")
 
-    if input_text:
-        user_content = f"{instruction}\n{input_text}"
-    else:
-        user_content = instruction
-
-    system = example.get("system", None)
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": user_content})
-    messages.append({"role": "assistant", "content": output})
-
-    return messages
+    return [
+        {"role": "user", "content": user_content},
+        {"role": "assistant", "content": output},
+    ]
 
 
 def _format_sft_example(example: dict, tokenizer) -> dict:
@@ -98,19 +92,14 @@ def _format_dpo_example(example: dict, tokenizer) -> dict:
 
     Input: {"instruction": "...", "input": "...", "chosen": "...", "rejected": "..."}
     """
-    instruction = example.get("instruction", "")
-    input_text = example.get("input", "")
+    parts = [p for p in (
+        example.get("system", ""),
+        example.get("instruction", ""),
+        example.get("input", ""),
+    ) if p]
+    user_content = "\n".join(parts)
 
-    if input_text:
-        user_content = f"{instruction}\n{input_text}"
-    else:
-        user_content = instruction
-
-    system = example.get("system", None)
-    prompt_messages = []
-    if system:
-        prompt_messages.append({"role": "system", "content": system})
-    prompt_messages.append({"role": "user", "content": user_content})
+    prompt_messages = [{"role": "user", "content": user_content}]
 
     prompt = tokenizer.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
 
