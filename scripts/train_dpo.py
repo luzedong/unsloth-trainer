@@ -72,7 +72,7 @@ def main():
         train_dataset=datasets["train"],
         eval_dataset=datasets.get("val"),
         args=training_args,
-        callbacks=[ExperimentCallback(config, config_path)],
+        callbacks=[ExperimentCallback(config, config_path, train_dataset=datasets["train"])],
     )
 
     # Train

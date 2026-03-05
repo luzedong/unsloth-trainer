@@ -12,14 +12,16 @@ from transformers import TrainerCallback
 class ExperimentCallback(TrainerCallback):
     """Callback that logs experiment info and saves config on completion."""
 
-    def __init__(self, config: dict, config_path: str | None = None):
+    def __init__(self, config: dict, config_path: str | None = None, train_dataset=None):
         self.config = config
         self.config_path = config_path
+        self.train_dataset = train_dataset
         self.start_time = None
         self.best_loss = None
 
     def on_train_begin(self, args, state, control, **kwargs):
         self.start_time = time.time()
+        self._print_first_example(kwargs)
 
         config = self.config
         model_cfg = config.get("model", {})
@@ -91,6 +93,59 @@ class ExperimentCallback(TrainerCallback):
         print(f"  Output dir:     {args.output_dir}")
         print("=" * 60)
         print()
+
+    def _print_first_example(self, kwargs):
+        """Print token statistics and the first training example."""
+        tokenizer = kwargs.get("processing_class") or kwargs.get("tokenizer")
+        model = kwargs.get("model")
+        if tokenizer is None or model is None:
+            return
+
+        train_dataset = self.train_dataset
+        if train_dataset is None:
+            return
+
+        try:
+            # Token statistics
+            if "input_ids" in train_dataset.column_names:
+                lengths = [len(ids) for ids in train_dataset["input_ids"]]
+                avg_len = sum(lengths) / len(lengths)
+                max_len = max(lengths)
+                min_len = min(lengths)
+                median_len = sorted(lengths)[len(lengths) // 2]
+
+                print()
+                print("-" * 60)
+                print("  Token Statistics")
+                print("-" * 60)
+                print(f"  Total samples:  {len(lengths)}")
+                print(f"  Avg tokens:     {avg_len:.0f}")
+                print(f"  Median tokens:  {median_len}")
+                print(f"  Min tokens:     {min_len}")
+                print(f"  Max tokens:     {max_len}")
+
+            # First example
+            first = train_dataset[0]
+            input_ids = first["input_ids"]
+            labels = first.get("labels")
+
+            decoded = tokenizer.decode(input_ids, skip_special_tokens=False)
+
+            print()
+            print("-" * 60)
+            print("  First training example")
+            print("-" * 60)
+            print(f"  Token count: {len(input_ids)}")
+            print(f"  input_ids[:10]: {input_ids[:10]}")
+            if labels is not None:
+                n_masked = sum(1 for l in labels if l == -100)
+                print(f"  Labels: {len(labels)} total, {n_masked} masked (-100)")
+            print()
+            print(decoded[:500] + ("..." if len(decoded) > 500 else ""))
+            print("-" * 60)
+            print()
+        except Exception as e:
+            print(f"  [Could not print first example: {e}]")
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         if logs:
