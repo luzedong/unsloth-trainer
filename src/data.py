@@ -7,7 +7,12 @@ from datasets import Dataset
 
 
 def _load_data(file_path: str) -> list[dict]:
-    """Load a JSON or JSONL file into a list of dicts."""
+    """Load a JSON or JSONL file into a list of dicts.
+
+    All records are normalised to have the same keys so that
+    ``Dataset.from_list`` does not silently drop columns that only
+    appear in later records.
+    """
     path = Path(file_path)
     if not path.exists():
         raise FileNotFoundError(f"Data file not found: {path}")
@@ -17,34 +22,44 @@ def _load_data(file_path: str) -> list[dict]:
             data = json.load(f)
             if not isinstance(data, list):
                 raise ValueError(f"JSON file must contain a list of objects: {path}")
-            return data
+        else:
+            data = []
+            for line in f:
+                line = line.strip()
+                if line:
+                    data.append(json.loads(line))
 
-        # Default: JSONL (one JSON object per line)
-        data = []
-        for line in f:
-            line = line.strip()
-            if line:
-                data.append(json.loads(line))
+    if not data:
         return data
+
+    all_keys = set().union(*(d.keys() for d in data))
+    for d in data:
+        for k in all_keys:
+            d.setdefault(k, "")
+
+    return data
 
 
 def _format_alpaca_to_messages(example: dict) -> list[dict]:
     """Convert Alpaca format to chat messages list.
 
-    Concatenates system, instruction, and input into a single user message.
+    Alpaca: {"instruction": "...", "input": "...", "output": "...", "system": "..."}
+    Messages: [{"role": "system", ...}, {"role": "user", ...}, {"role": "assistant", ...}]
     """
-    parts = [p for p in (
-        example.get("system", ""),
-        example.get("instruction", ""),
-        example.get("input", ""),
-    ) if p]
-    user_content = "\n".join(parts)
+    instruction = example.get("instruction", "")
+    input_text = example.get("input", "")
     output = example.get("output", "")
 
-    return [
-        {"role": "user", "content": user_content},
-        {"role": "assistant", "content": output},
-    ]
+    user_content = f"{instruction}\n{input_text}" if input_text else instruction
+
+    messages = []
+    system = example.get("system", "")
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": user_content})
+    messages.append({"role": "assistant", "content": output})
+
+    return messages
 
 
 def _format_sft_example(example: dict, tokenizer) -> dict:
@@ -68,7 +83,6 @@ def load_sft_dataset(config: dict, tokenizer) -> dict:
         lambda x: _format_sft_example(x, tokenizer),
         remove_columns=train_dataset.column_names,
     )
-
     result = {"train": train_dataset}
 
     if data_cfg.get("val_file"):
@@ -92,14 +106,19 @@ def _format_dpo_example(example: dict, tokenizer) -> dict:
 
     Input: {"instruction": "...", "input": "...", "chosen": "...", "rejected": "..."}
     """
-    parts = [p for p in (
-        example.get("system", ""),
-        example.get("instruction", ""),
-        example.get("input", ""),
-    ) if p]
-    user_content = "\n".join(parts)
+    instruction = example.get("instruction", "")
+    input_text = example.get("input", "")
 
-    prompt_messages = [{"role": "user", "content": user_content}]
+    if input_text:
+        user_content = f"{instruction}\n{input_text}"
+    else:
+        user_content = instruction
+
+    system = example.get("system", None)
+    prompt_messages = []
+    if system:
+        prompt_messages.append({"role": "system", "content": system})
+    prompt_messages.append({"role": "user", "content": user_content})
 
     prompt = tokenizer.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
 
