@@ -36,7 +36,8 @@ def main():
     # Load model and data
     model, tokenizer, processor = load_model(config)
     datasets = load_sft_dataset(config, tokenizer)
-
+    print("datasets:")
+    print(datasets["train"][0])
     # Training arguments
     train_cfg = config["training"]
     training_args = SFTConfig(
@@ -59,7 +60,6 @@ def main():
         eval_steps=train_cfg.get("eval_steps"),
         max_seq_length=config["model"]["max_seq_length"],
         dataset_text_field="text",
-        dataset_num_proc=train_cfg.get("dataset_num_proc", 1),
         report_to="none",
     )
 
