@@ -22,7 +22,8 @@ unsloth-trainer/
 │   ├── train_sft.py            # SFT training
 │   ├── train_dpo.py            # DPO training
 │   ├── merge_lora.py           # LoRA merge & export
-│   └── inference.py            # Inference (interactive / batch)
+│   ├── inference.py            # Inference (interactive / batch)
+│   └── setup_env.sh            # Environment setup
 ├── data/
 │   ├── raw/                    # Raw data
 │   └── processed/              # Processed training data
@@ -34,8 +35,10 @@ unsloth-trainer/
 ### Install Dependencies
 
 ```bash
-pip install unsloth
+bash scripts/setup_env.sh
 ```
+
+> If you don't need the GitHub proxy, use `bash scripts/setup_env.sh --no-proxy`.
 
 ### SFT Training
 

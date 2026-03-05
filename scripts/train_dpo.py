@@ -57,6 +57,8 @@ def main():
         seed=train_cfg["seed"],
         bf16=train_cfg["bf16"],
         optim=train_cfg["optim"],
+        eval_strategy=train_cfg.get("eval_strategy", "no"),
+        eval_steps=train_cfg.get("eval_steps"),
         beta=dpo_cfg.get("beta", 0.1),
         loss_type=dpo_cfg.get("loss_type", "sigmoid"),
         max_length=config["model"]["max_seq_length"],

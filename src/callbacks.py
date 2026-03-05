@@ -103,6 +103,47 @@ class ExperimentCallback(TrainerCallback):
                 if self.best_loss is None or loss < self.best_loss:
                     self.best_loss = loss
 
+    @staticmethod
+    def _save_loss_plot(log_history: list[dict], output_dir: Path):
+        """Plot train/eval loss curves and save to output_dir."""
+        if not log_history:
+            return
+
+        train_steps, train_losses = [], []
+        eval_steps, eval_losses = [], []
+        for entry in log_history:
+            step = entry.get("step")
+            if "loss" in entry:
+                train_steps.append(step)
+                train_losses.append(entry["loss"])
+            if "eval_loss" in entry:
+                eval_steps.append(step)
+                eval_losses.append(entry["eval_loss"])
+
+        if not train_steps:
+            return
+
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+        except ImportError:
+            print("  [Warning] matplotlib not installed, skipping loss plot.")
+            return
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(train_steps, train_losses, label="Train Loss", linewidth=1.5)
+        if eval_steps:
+            ax.plot(eval_steps, eval_losses, label="Eval Loss", linewidth=1.5, marker="o", markersize=4)
+        ax.set_xlabel("Step")
+        ax.set_ylabel("Loss")
+        ax.set_title("Training Loss")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(output_dir / "loss_plot.png", dpi=150)
+        plt.close(fig)
+
     def on_train_end(self, args, state, control, **kwargs):
         output_dir = Path(args.output_dir)
 
@@ -118,6 +159,15 @@ class ExperimentCallback(TrainerCallback):
         config_json = output_dir / "train_config.json"
         with open(config_json, "w") as f:
             json.dump(self.config, f, indent=2, default=str)
+
+        # Save training log history
+        if state.log_history:
+            log_path = output_dir / "train_log.json"
+            with open(log_path, "w") as f:
+                json.dump(state.log_history, f, indent=2, default=str)
+
+        # Plot loss curves
+        self._save_loss_plot(state.log_history, output_dir)
 
         # Gather metrics
         final_loss = None
@@ -149,25 +199,36 @@ class ExperimentCallback(TrainerCallback):
         # List checkpoint directories
         checkpoints = sorted(output_dir.glob("checkpoint-*")) if output_dir.exists() else []
 
-        print()
-        print("=" * 60)
-        print("  Training Complete")
-        print("=" * 60)
-        print(f"  Total steps:    {state.global_step}")
-        print(f"  Epochs:         {state.epoch:.2f}" if state.epoch else "  Epochs:         N/A")
+        # Build summary lines (print and save to file)
+        lines = []
+        lines.append("")
+        lines.append("=" * 60)
+        lines.append("  Training Complete")
+        lines.append("=" * 60)
+        lines.append(f"  Total steps:    {state.global_step}")
+        lines.append(f"  Epochs:         {state.epoch:.2f}" if state.epoch else "  Epochs:         N/A")
         if final_loss is not None:
-            print(f"  Final loss:     {final_loss:.4f}")
+            lines.append(f"  Final loss:     {final_loss:.4f}")
         if self.best_loss is not None:
-            print(f"  Best loss:      {self.best_loss:.4f}")
-        print(f"  Peak GPU mem:   {gpu_mem_str}")
-        print(f"  Duration:       {duration_str}")
-        print("-" * 60)
+            lines.append(f"  Best loss:      {self.best_loss:.4f}")
+        lines.append(f"  Peak GPU mem:   {gpu_mem_str}")
+        lines.append(f"  Duration:       {duration_str}")
+        lines.append("-" * 60)
         if checkpoints:
-            print("  Checkpoints:")
+            lines.append("  Checkpoints:")
             for ckpt in checkpoints:
-                print(f"    - {ckpt}")
-        print(f"  Final model:    {output_dir}")
+                lines.append(f"    - {ckpt}")
+        lines.append(f"  Final model:    {output_dir}")
         if config_backup_path:
-            print(f"  Config backup:  {config_backup_path}")
-        print("=" * 60)
-        print()
+            lines.append(f"  Config backup:  {config_backup_path}")
+        lines.append("=" * 60)
+        lines.append("")
+
+        # Print to console
+        for line in lines:
+            print(line)
+
+        # Save summary to file
+        summary_path = output_dir / "train_summary.txt"
+        with open(summary_path, "w") as f:
+            f.write("\n".join(lines) + "\n")

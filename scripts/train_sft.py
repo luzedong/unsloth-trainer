@@ -55,6 +55,8 @@ def main():
         seed=train_cfg["seed"],
         bf16=train_cfg["bf16"],
         optim=train_cfg["optim"],
+        eval_strategy=train_cfg.get("eval_strategy", "no"),
+        eval_steps=train_cfg.get("eval_steps"),
         max_seq_length=config["model"]["max_seq_length"],
         dataset_text_field="text",
         report_to="none",
