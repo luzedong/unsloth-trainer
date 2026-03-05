@@ -34,7 +34,7 @@ def main():
     output_dir = str(Path(output_cfg["dir"]) / f"{experiment_name}_{timestamp}")
 
     # Load model and data
-    model, tokenizer = load_model(config)
+    model, tokenizer, processor = load_model(config)
     datasets = load_dpo_dataset(config, tokenizer)
 
     # DPO config
@@ -65,10 +65,10 @@ def main():
         report_to="none",
     )
 
-    # Create trainer
+    # Create trainer — pass plain tokenizer to avoid VLM code path
     trainer = DPOTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=datasets["train"],
         eval_dataset=datasets.get("val"),
         args=training_args,
@@ -81,7 +81,7 @@ def main():
     # Save final model
     final_dir = str(Path(output_dir) / "final")
     model.save_pretrained(final_dir)
-    tokenizer.save_pretrained(final_dir)
+    processor.save_pretrained(final_dir)
     print(f"Final model saved to {final_dir}")
 
 
